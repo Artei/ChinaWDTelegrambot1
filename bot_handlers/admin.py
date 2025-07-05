@@ -728,4 +728,56 @@ async def send_welcome_to_channel(message: types.Message):
         await message.delete()
     except Exception:
         # Не удалось удалить (нет прав или личный чат), просто игнорируем
-        pass 
+        pass
+
+
+# --- Alternative handler to post the welcome message from a private chat ---
+
+@router.message(Command("post_welcome"), AdminFilter())
+async def post_welcome_from_private(message: types.Message):
+    """
+    Публикует приветственное сообщение в доверенный канал.
+    Вызывается из личного чата с ботом.
+    """
+    channel_id = settings.bot.trusted_channel_id
+    if not channel_id:
+        await message.answer(
+            "❌ ID доверенного канала не настроен в 'Secrets'.\n"
+            "Добавьте переменную `TRUSTED_CHANNEL_ID` и перезапустите бота."
+        )
+        return
+
+    welcome_text = (
+        "**Добро пожаловать на канал ChinaWD!**\n\n"
+        "Я ваш личный помощник по заказу автомобилей из Китая. Что мы можем сделать:\n\n"
+        "🔹 **Калькулятор:** Есть цена авто в юанях? Давайте посчитаем конечную стоимость в РФ с учетом всех сборов и комиссий.\n\n"
+        "🔹 **Связь с менеджером:** Есть вопросы, нужна помощь с выбором, или хотите сделать заказ? Оставьте заявку.\n\n"
+        "🔹 **Ответы на вопросы (FAQ):** Узнайте всё о сроках доставки, способах оплаты и гарантиях.\n\n"
+        "Выберите нужный раздел в меню ниже 👇"
+    )
+    keyboard = kb.get_main_channel_keyboard()
+
+    try:
+        # Пытаемся отправить сообщение в канал
+        profile_photos = await message.bot.get_user_profile_photos(message.bot.id)
+        if not profile_photos or not profile_photos.photos:
+            raise ValueError("Bot has no profile photo")
+        
+        photo_id = profile_photos.photos[0][-1].file_id
+        
+        await message.bot.send_photo(
+            chat_id=channel_id,
+            photo=photo_id,
+            caption=welcome_text,
+            parse_mode="Markdown",
+            reply_markup=keyboard
+        )
+        await message.answer(f"✅ Приветственное сообщение успешно отправлено в канал (`{channel_id}`).")
+
+    except Exception as e:
+        logging.error(f"Failed to post to channel {channel_id}: {e}")
+        await message.answer(
+            f"❌ Не удалось отправить сообщение в канал (`{channel_id}`).\n\n"
+            f"**Ошибка:** `{e}`\n\n"
+            "Убедитесь, что бот добавлен в канал и имеет права на отправку сообщений."
+        ) 

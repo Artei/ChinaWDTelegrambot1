@@ -7,7 +7,16 @@ class BotConfig:
     """Хранит базовые настройки бота и ID ролей."""
     token: str = os.getenv("BOT_TOKEN")
     admin_ids: list[int] = field(default_factory=lambda: [int(admin_id) for admin_id in os.getenv("ADMIN_IDS", "").split(",") if admin_id])
-    trusted_channel_id: int = int(os.getenv("TRUSTED_CHANNEL_ID", 0))
+    
+    @property
+    def trusted_channel_id(self) -> int | None:
+        channel_id_str = os.getenv("TRUSTED_CHANNEL_ID")
+        if channel_id_str and channel_id_str.strip():
+            try:
+                return int(channel_id_str)
+            except (ValueError, TypeError):
+                return None
+        return None
 
 @dataclass
 class CurrencyRates:
