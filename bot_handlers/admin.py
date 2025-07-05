@@ -12,17 +12,10 @@ from core.faq_manager import load_faq_data, save_faq_data
 from core.settings_manager import save_settings
 import keyboards as kb
 
-class AdminFilter(Filter):
-    """Фильтр для проверки, является ли пользователь администратором."""
-    async def __call__(self, event: types.TelegramObject, *args, **kwargs) -> bool:
-        # Универсальная проверка и для Message, и для CallbackQuery
-        user = event.from_user
-        return user.id in settings.bot.admin_ids
-
 router = Router()
 # Применяем фильтр ко всем обработчикам в этом роутере
-router.message.filter(AdminFilter())
-router.callback_query.filter(AdminFilter())
+# router.message.filter(AdminFilter()) # This line is removed as per the edit hint
+# router.callback_query.filter(AdminFilter()) # This line is removed as per the edit hint
 
 
 # --- FSM для изменения настроек ---
@@ -673,13 +666,28 @@ async def delete_faq_item(callback: types.CallbackQuery):
 
 # --- Handler for sending a welcome message to a channel ---
 
-@router.message(Command("send_welcome"), AdminFilter())
-@router.channel_post(Command("send_welcome"), AdminFilter())
-async def send_welcome_to_channel(message: Message):
+@router.message(Command("send_welcome"))
+@router.channel_post(Command("send_welcome"))
+async def send_welcome_to_channel(message: types.Message):
     """
     Отправляет приветственное сообщение с главным меню и фото в чат.
-    Предназначено для использования администраторами в каналах/группах.
+    Проверяет права доступа в зависимости от типа чата.
     """
+    # --- Проверка прав доступа ---
+    # Для личного чата - проверяем ID пользователя
+    if message.chat.type == "private":
+        if message.from_user.id not in settings.bot.admin_ids:
+            await message.answer("Эта команда доступна только администратору бота.")
+            return
+    # Для канала - проверяем ID канала
+    elif message.chat.type == "channel":
+        if message.chat.id != settings.bot.trusted_channel_id:
+            logging.info(f"Ignoring /send_welcome from untrusted channel {message.chat.id}")
+            return
+    # В других типах чатов (группах) команду не выполняем
+    else:
+        return
+
     welcome_text = (
         "**Добро пожаловать на канал ChinaWD!**\n\n"
         "Я ваш личный помощник по заказу автомобилей из Китая. Что мы можем сделать:\n\n"
