@@ -76,8 +76,12 @@ async def cancel_calculation(message: types.Message, state: FSMContext):
     await state.clear()
     is_admin = message.from_user.id in settings.bot.admin_ids
     await message.answer(
-        "Расчет отменен. Вы вернулись в главное меню.",
-        reply_markup=kb.get_main_keyboard(is_admin)
+        "Расчет отменен.",
+        reply_markup=types.ReplyKeyboardRemove()
+    )
+    await message.answer(
+        "Вы вернулись в главное меню.",
+        reply_markup=kb.get_main_inline_keyboard(is_admin)
     )
 
 @router.message(CarCalculationStates.waiting_for_car_price_cny)
