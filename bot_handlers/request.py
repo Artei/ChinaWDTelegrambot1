@@ -23,28 +23,33 @@ def get_phone_request_keyboard() -> ReplyKeyboardMarkup:
 
 
 @router.callback_query(F.data == "main_menu:application")
-async def start_request(callback: CallbackQuery, state: FSMContext):
-    """Начинает процесс создания заявки."""
+async def start_request(message: Message | CallbackQuery, state: FSMContext):
+    """Начинает процесс создания заявки, может вызываться и по deep-link."""
     import asyncio
+    
+    if isinstance(message, CallbackQuery):
+        msg = message.message
+        await message.answer()  # Закрываем "часики" на кнопке
+    else:
+        msg = message
 
     # Сначала отправляем текст без клавиатуры
-    await callback.message.answer(
+    await msg.answer(
         "Чтобы оставить заявку, пожалуйста, отправьте ваш номер телефона в сообщении. "
         "Или нажмите на кнопку, которая появится ниже.",
-        reply_markup=types.ReplyKeyboardRemove()
+        reply_markup=ReplyKeyboardRemove()
     )
     
     # Делаем асинхронную паузу
     await asyncio.sleep(4)
     
     # Затем отправляем клавиатуру с подсказкой
-    await callback.message.answer(
+    await msg.answer(
         "Нажмите на кнопку ниже 👇",
         reply_markup=get_phone_request_keyboard()
     )
 
     await state.set_state(RequestState.waiting_for_phone)
-    await callback.answer()
 
 
 @router.message(RequestState.waiting_for_phone, F.contact)

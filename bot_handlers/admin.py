@@ -674,6 +674,7 @@ async def delete_faq_item(callback: types.CallbackQuery):
 # --- Handler for sending a welcome message to a channel ---
 
 @router.message(Command("send_welcome"), AdminFilter())
+@router.channel_post(Command("send_welcome"), AdminFilter())
 async def send_welcome_to_channel(message: Message):
     """
     Отправляет приветственное сообщение с главным меню и фото в чат.
