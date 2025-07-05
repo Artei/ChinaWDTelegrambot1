@@ -24,4 +24,17 @@ def get_main_inline_keyboard(is_admin: bool) -> InlineKeyboardMarkup:
     if is_admin:
         buttons.append([InlineKeyboardButton(text="🔧 Админ-панель", callback_data="main_menu:admin")])
 
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def get_main_channel_keyboard() -> InlineKeyboardMarkup:
+    """Генерирует Inline-клавиатуру со ссылками для канала."""
+    bot_username = "ChinaWD_bot"  # Ваше имя пользователя бота
+    buttons = [
+        [InlineKeyboardButton(text="🚗 Калькулятор", url=f"https://t.me/{bot_username}?start=calculator")],
+        [
+            InlineKeyboardButton(text="❓ FAQ", url=f"https://t.me/{bot_username}?start=faq"),
+            InlineKeyboardButton(text="📝 Оставить заявку", url=f"https://t.me/{bot_username}?start=application")
+        ]
+    ]
     return InlineKeyboardMarkup(inline_keyboard=buttons) 

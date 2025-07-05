@@ -9,7 +9,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from core.config import settings
 from core.settings_manager import load_settings, save_settings
-from bot_handlers import calculator, faq, admin, request
+from bot_handlers import calculator, faq, admin, request, deep_links
 import keyboards as kb
 from core.currency_updater import fetch_currency_rates
 
@@ -76,6 +76,7 @@ async def main():
     dp.include_router(calculator.router)
     dp.include_router(faq.router)
     dp.include_router(request.router)
+    dp.include_router(deep_links.router)
     
     # Обработчик команды /start
     @dp.message(CommandStart())
