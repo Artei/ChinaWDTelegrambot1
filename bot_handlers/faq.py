@@ -50,7 +50,7 @@ async def show_faq_answer(callback: types.CallbackQuery):
         keyboard = InlineKeyboardMarkup(inline_keyboard=[[back_button]])
         
         # Формируем текст сообщения
-        response_text = f"<b>Вопрос:</b> {question}\n\n<b>Ответ:</b> {answer}"
+        response_text = f"<b>Вопрос:</b> {question}\n\n<b>Ответ:</b>\n{answer}"
         
         await callback.message.edit_text(response_text, reply_markup=keyboard, parse_mode="HTML")
     
