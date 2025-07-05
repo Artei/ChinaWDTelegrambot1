@@ -12,6 +12,15 @@ from core.faq_manager import load_faq_data, save_faq_data
 from core.settings_manager import save_settings
 import keyboards as kb
 
+class AdminFilter(Filter):
+    """Фильтр для проверки, является ли пользователь администратором."""
+    async def __call__(self, event: types.TelegramObject, *args, **kwargs) -> bool:
+        # Универсальная проверка и для Message, и для CallbackQuery
+        user = getattr(event, 'from_user', None)
+        if user:
+            return user.id in settings.bot.admin_ids
+        return False
+
 router = Router()
 # УБИРАЕМ ГЛОБАЛЬНЫЙ ФИЛЬТР, ТАК КАК ОН МЕШАЕТ channel_post
 # router.message.filter(AdminFilter())
