@@ -13,9 +13,9 @@ from core.settings_manager import save_settings
 import keyboards as kb
 
 router = Router()
-# Применяем фильтр ко всем обработчикам в этом роутере
-# router.message.filter(AdminFilter()) # This line is removed as per the edit hint
-# router.callback_query.filter(AdminFilter()) # This line is removed as per the edit hint
+# УБИРАЕМ ГЛОБАЛЬНЫЙ ФИЛЬТР, ТАК КАК ОН МЕШАЕТ channel_post
+# router.message.filter(AdminFilter())
+# router.callback_query.filter(AdminFilter())
 
 
 # --- FSM для изменения настроек ---
@@ -128,8 +128,8 @@ def _get_calculator_settings_text() -> str:
 
 # --- Обработчики админ-панели ---
 
-@router.message(F.text == "🔧 Админ-панель")
-@router.callback_query(F.data == "main_menu:admin")
+@router.message(F.text == "🔧 Админ-панель", AdminFilter())
+@router.callback_query(F.data == "main_menu:admin", AdminFilter())
 async def show_admin_menu(message: types.Message | types.CallbackQuery):
     """Показывает главное меню админ-панели."""
     if isinstance(message, types.CallbackQuery):
@@ -139,13 +139,13 @@ async def show_admin_menu(message: types.Message | types.CallbackQuery):
         msg = message
     await msg.answer("Добро пожаловать в панель администратора!", reply_markup=get_admin_main_keyboard())
 
-@router.callback_query(F.data == "admin_main_menu")
+@router.callback_query(F.data == "admin_main_menu", AdminFilter())
 async def back_to_admin_menu(callback: types.CallbackQuery):
     """Возвращает в главное меню админки."""
     await callback.message.edit_text("Добро пожаловать в панель администратора!", reply_markup=get_admin_main_keyboard())
     await callback.answer()
 
-@router.callback_query(F.data == "admin_calculator_menu")
+@router.callback_query(F.data == "admin_calculator_menu", AdminFilter())
 async def show_calculator_settings(callback: types.CallbackQuery):
     """Показывает меню настроек калькулятора с текущими значениями."""
     text = _get_calculator_settings_text()
@@ -156,13 +156,13 @@ async def show_calculator_settings(callback: types.CallbackQuery):
     )
     await callback.answer()
 
-@router.callback_query(F.data.in_({"admin_set_fees", "admin_set_recycling_fee"}))
+@router.callback_query(F.data.in_({"admin_set_fees", "admin_set_recycling_fee"}), AdminFilter())
 async def section_in_development(callback: types.CallbackQuery):
     """Заглушка для разделов в разработке."""
     await callback.answer("Этот раздел находится в разработке.", show_alert=True)
 
 
-@router.callback_query(F.data == "admin_set_duties")
+@router.callback_query(F.data == "admin_set_duties", AdminFilter())
 async def show_duty_age_categories(callback: types.CallbackQuery):
     """Показывает меню выбора возрастной категории для пошлин."""
     await callback.message.edit_text(
@@ -172,7 +172,7 @@ async def show_duty_age_categories(callback: types.CallbackQuery):
     await callback.answer()
 
 
-@router.callback_query(F.data == "admin_set_recycling_fee")
+@router.callback_query(F.data == "admin_set_recycling_fee", AdminFilter())
 async def start_setting_recycling_fee(callback: types.CallbackQuery, state: FSMContext):
     """Начинает диалог изменения утилизационного сбора."""
     await state.clear()
@@ -195,7 +195,7 @@ async def _ask_for_recycling_over_3(message: Message, state: FSMContext):
     )
     await state.set_state(AdminStates.waiting_for_recycling_fee_over_3)
 
-@router.message(AdminStates.waiting_for_recycling_fee_under_3)
+@router.message(AdminStates.waiting_for_recycling_fee_under_3, AdminFilter())
 async def process_recycling_fee_under_3(message: Message, state: FSMContext):
     """Обрабатывает сбор для авто младше 3 лет и запрашивает для старше 3 лет."""
     try:
@@ -213,7 +213,7 @@ async def process_recycling_fee_under_3(message: Message, state: FSMContext):
         )
 
 
-@router.message(AdminStates.waiting_for_recycling_fee_over_3)
+@router.message(AdminStates.waiting_for_recycling_fee_over_3, AdminFilter())
 async def process_recycling_fee_over_3_and_save(message: Message, state: FSMContext):
     """Обрабатывает второй сбор, сохраняет оба и завершает диалог."""
     try:
@@ -247,7 +247,7 @@ async def process_recycling_fee_over_3_and_save(message: Message, state: FSMCont
         )
 
 
-@router.callback_query(F.data.startswith("duty_age_"))
+@router.callback_query(F.data.startswith("duty_age_"), AdminFilter())
 async def start_setting_duty_rates(callback: types.CallbackQuery, state: FSMContext):
     """Начинает диалог изменения ставок пошлин для выбранной категории."""
     age_category_key = callback.data.replace("duty_age_", "")
@@ -272,8 +272,7 @@ async def start_setting_duty_rates(callback: types.CallbackQuery, state: FSMCont
     )
     await callback.answer()
 
-
-@router.message(AdminStates.waiting_for_duty_rates)
+@router.message(AdminStates.waiting_for_duty_rates, AdminFilter())
 async def process_duty_rates(message: Message, state: FSMContext):
     """Обрабатывает и сохраняет новые ставки пошлин."""
     new_rates_text = message.text
@@ -321,7 +320,7 @@ async def process_duty_rates(message: Message, state: FSMContext):
             reply_markup=get_admin_cancel_keyboard()
         )
 
-@router.callback_query(F.data == "admin_step_back")
+@router.callback_query(F.data == "admin_step_back", AdminFilter())
 async def admin_step_back_handler(callback: types.CallbackQuery, state: FSMContext):
     """Обрабатывает нажатие кнопки 'Назад' в диалогах."""
     current_state = await state.get_state()
@@ -346,7 +345,7 @@ async def admin_step_back_handler(callback: types.CallbackQuery, state: FSMConte
         await start_adding_faq(callback, state)
 
 
-@router.callback_query(F.data == "admin_cancel_action")
+@router.callback_query(F.data == "admin_cancel_action", AdminFilter())
 async def cancel_admin_action(callback: types.CallbackQuery, state: FSMContext):
     """Отменяет FSM в админке и возвращает в предыдущее меню."""
     current_state = await state.get_state()
@@ -373,7 +372,7 @@ async def cancel_admin_action(callback: types.CallbackQuery, state: FSMContext):
 
 # --- Логика изменения курсов валют ---
 
-@router.callback_query(F.data == "admin_set_rates")
+@router.callback_query(F.data == "admin_set_rates", AdminFilter())
 async def start_setting_rates(callback: types.CallbackQuery, state: FSMContext):
     """Начинает диалог изменения курсов валют."""
     await state.clear()
@@ -392,7 +391,7 @@ async def _ask_for_eur_rate(message: Message, state: FSMContext):
     )
     await state.set_state(AdminStates.waiting_for_eur_rate)
 
-@router.message(AdminStates.waiting_for_cny_rate)
+@router.message(AdminStates.waiting_for_cny_rate, AdminFilter())
 async def process_cny_rate(message: Message, state: FSMContext):
     """Обрабатывает новый курс юаня и запрашивает курс евро."""
     try:
@@ -407,7 +406,7 @@ async def process_cny_rate(message: Message, state: FSMContext):
             reply_markup=get_admin_cancel_keyboard()
         )
 
-@router.message(AdminStates.waiting_for_eur_rate)
+@router.message(AdminStates.waiting_for_eur_rate, AdminFilter())
 async def process_eur_rate_and_save(message: Message, state: FSMContext):
     """Обрабатывает новый курс евро, сохраняет и показывает результат."""
     try:
@@ -445,7 +444,7 @@ async def process_eur_rate_and_save(message: Message, state: FSMContext):
 
 # --- Логика изменения комиссий и расходов ---
 
-@router.callback_query(F.data == "admin_set_fees")
+@router.callback_query(F.data == "admin_set_fees", AdminFilter())
 async def start_setting_fees(callback: types.CallbackQuery, state: FSMContext):
     """Начинает диалог изменения комиссий."""
     await state.clear()
@@ -460,12 +459,9 @@ async def start_setting_fees(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(AdminStates.waiting_for_bank_commission)
     await callback.answer()
 
-async def _ask_for_company_commission(message: Message | types.CallbackQuery, state: FSMContext):
+async def _ask_for_company_commission(message: Message, state: FSMContext):
     """Отправляет запрос на ввод комиссии компании."""
-    target_message = message if isinstance(message, Message) else message.message
-    method = target_message.answer if isinstance(message, Message) else target_message.edit_text
-
-    await method(
+    await message.answer(
          f"Текущая комиссия компании: `{settings.fees.company_commission_rub} ₽`.\n\n"
          f"Введите новую фиксированную комиссию компании в рублях:",
          reply_markup=get_admin_back_and_cancel_keyboard(),
@@ -483,7 +479,7 @@ async def _ask_for_china_expenses(message: Message, state: FSMContext):
     )
     await state.set_state(AdminStates.waiting_for_china_expenses)
 
-@router.message(AdminStates.waiting_for_bank_commission)
+@router.message(AdminStates.waiting_for_bank_commission, AdminFilter())
 async def process_bank_commission(message: Message, state: FSMContext):
     """Обрабатывает комиссию банка и запрашивает комиссию компании."""
     try:
@@ -501,7 +497,7 @@ async def process_bank_commission(message: Message, state: FSMContext):
         )
 
 
-@router.message(AdminStates.waiting_for_company_commission)
+@router.message(AdminStates.waiting_for_company_commission, AdminFilter())
 async def process_company_commission(message: Message, state: FSMContext):
     """Обрабатывает комиссию компании и запрашивает расходы в Китае."""
     try:
@@ -518,7 +514,7 @@ async def process_company_commission(message: Message, state: FSMContext):
         )
 
 
-@router.message(AdminStates.waiting_for_china_expenses)
+@router.message(AdminStates.waiting_for_china_expenses, AdminFilter())
 async def process_china_expenses_and_save(message: Message, state: FSMContext):
     """Обрабатывает расходы в Китае, сохраняет все и показывает результат."""
     try:
@@ -557,7 +553,7 @@ async def process_china_expenses_and_save(message: Message, state: FSMContext):
 
 # --- Управление FAQ ---
 
-@router.callback_query(F.data == "admin_faq_menu")
+@router.callback_query(F.data == "admin_faq_menu", AdminFilter())
 async def show_faq_management_menu(callback: types.CallbackQuery, state: FSMContext):
     """Показывает меню управления FAQ."""
     await state.clear()
@@ -572,7 +568,7 @@ async def show_faq_management_menu(callback: types.CallbackQuery, state: FSMCont
 
 # --- Добавление FAQ ---
 
-@router.callback_query(F.data == "faq_add")
+@router.callback_query(F.data == "faq_add", AdminFilter())
 async def start_adding_faq(callback: types.CallbackQuery, state: FSMContext):
     """Начинает процесс добавления нового вопроса."""
     await state.set_state(AdminStates.faq_add_question)
@@ -590,18 +586,17 @@ async def _ask_for_faq_answer(message: Message, state: FSMContext):
     )
     await state.set_state(AdminStates.faq_add_answer)
 
-@router.message(AdminStates.faq_add_question)
+@router.message(AdminStates.faq_add_question, AdminFilter())
 async def process_faq_question(message: Message, state: FSMContext):
     """Сохраняет вопрос и запрашивает ответ."""
     await state.update_data(question=message.text)
     await _ask_for_faq_answer(message, state)
 
-
-@router.message(AdminStates.faq_add_answer)
+@router.message(AdminStates.faq_add_answer, AdminFilter())
 async def process_faq_answer(message: Message, state: FSMContext):
-    """Сохраняет ответ и новый элемент FAQ."""
-    user_data = await state.get_data()
-    question = user_data.get('question')
+    """Сохраняет ответ и завершает процесс."""
+    data = await state.get_data()
+    question = data.get('question')
     answer = message.text
 
     faq_data = load_faq_data()
@@ -623,10 +618,9 @@ async def process_faq_answer(message: Message, state: FSMContext):
 
 
 # --- Удаление FAQ ---
-
-@router.callback_query(F.data == "faq_delete_list")
-async def show_faq_for_deletion(callback: types.CallbackQuery):
-    """Показывает список вопросов для удаления."""
+@router.callback_query(F.data == "faq_delete_list", AdminFilter())
+async def show_faq_delete_list(callback: types.CallbackQuery):
+    """Показывает клавиатуру для выбора вопроса для удаления."""
     faq_data = load_faq_data()
     if not faq_data:
         await callback.answer("Список FAQ пуст. Нечего удалять.", show_alert=True)
@@ -638,15 +632,14 @@ async def show_faq_for_deletion(callback: types.CallbackQuery):
     )
     await callback.answer()
 
-
-@router.callback_query(F.data.startswith("faq_delete_confirm_"))
-async def delete_faq_item(callback: types.CallbackQuery):
-    """Удаляет выбранный элемент FAQ."""
-    key_to_delete = callback.data.split("_")[-1]
+@router.callback_query(F.data.startswith("faq_delete_confirm_"), AdminFilter())
+async def confirm_faq_deletion(callback: types.CallbackQuery, state: FSMContext):
+    """Запрашивает подтверждение на удаление вопроса."""
+    question_id = callback.data.split("_")[-1]
 
     faq_data = load_faq_data()
-    if key_to_delete in faq_data:
-        del faq_data[key_to_delete]
+    if question_id in faq_data:
+        del faq_data[question_id]
         save_faq_data(faq_data)
         await callback.answer("Вопрос удален.", show_alert=True)
     else:
