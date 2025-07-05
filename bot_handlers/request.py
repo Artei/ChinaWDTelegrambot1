@@ -1,7 +1,7 @@
 from aiogram import Router, F, types
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 
 from core.config import settings
 from keyboards import get_main_inline_keyboard
@@ -13,21 +13,48 @@ class RequestState(StatesGroup):
     waiting_for_comment = State()
 
 
+def get_phone_request_keyboard() -> ReplyKeyboardMarkup:
+    """Создает клавиатуру с кнопкой запроса номера телефона."""
+    button = KeyboardButton(
+        text="📱 Поделиться номером телефона",
+        request_contact=True
+    )
+    return ReplyKeyboardMarkup(keyboard=[[button]], resize_keyboard=True, one_time_keyboard=True)
+
+
 @router.callback_query(F.data == "main_menu:application")
 async def start_request(callback: CallbackQuery, state: FSMContext):
     """Начинает процесс создания заявки."""
     await callback.message.answer(
-        "Чтобы оставить заявку, пожалуйста, укажите ваш номер телефона:",
+        "Чтобы оставить заявку, пожалуйста, нажмите на кнопку ниже, чтобы поделиться вашим номером телефона. "
+        "Или просто отправьте его в сообщении.",
+        reply_markup=get_phone_request_keyboard()
     )
     await state.set_state(RequestState.waiting_for_phone)
     await callback.answer()
 
 
-@router.message(RequestState.waiting_for_phone)
-async def process_phone(message: Message, state: FSMContext):
-    """Обрабатывает введенный телефон и запрашивает комментарий."""
+@router.message(RequestState.waiting_for_phone, F.contact)
+async def process_phone_from_contact(message: Message, state: FSMContext):
+    """Обрабатывает номер телефона, полученный через кнопку."""
+    await state.update_data(phone=message.contact.phone_number)
+    await message.answer(
+        "Спасибо! Ваш номер принят.",
+        reply_markup=ReplyKeyboardRemove()  # Убираем кастомную клавиатуру
+    )
+    await message.answer("Теперь, если хотите, оставьте комментарий (например, марка и модель авто):")
+    await state.set_state(RequestState.waiting_for_comment)
+
+
+@router.message(RequestState.waiting_for_phone, F.text)
+async def process_phone_from_text(message: Message, state: FSMContext):
+    """Обрабатывает номер телефона, введенный как текст."""
     await state.update_data(phone=message.text)
-    await message.answer("Спасибо. Если хотите, оставьте комментарий (например, марка и модель авто):")
+    await message.answer(
+        "Спасибо! Ваш номер принят.",
+        reply_markup=ReplyKeyboardRemove() # Убираем кастомную клавиатуру
+    )
+    await message.answer("Если хотите, оставьте комментарий (например, марка и модель авто):")
     await state.set_state(RequestState.waiting_for_comment)
 
 

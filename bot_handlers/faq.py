@@ -1,35 +1,16 @@
 from aiogram import Router, F, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from core.faq_manager import load_faq_data
 
 router = Router()
-
-# --- Текст для FAQ ---
-# В будущем это можно вынести в базу данных или YAML-файл для удобного редактирования
-FAQ_DATA = {
-    "delivery_time": {
-        "question": "Сколько времени занимает доставка?",
-        "answer": "Стандартные сроки доставки из Китая до нашего склада в Москве составляют 15-25 дней. Сроки могут меняться в зависимости от загруженности таможни и праздничных дней."
-    },
-    "payment_methods": {
-        "question": "Какие способы оплаты вы принимаете?",
-        "answer": "Мы принимаем оплату на карту российского банка (Сбер, Тинькофф, Альфа) или через систему быстрых платежей (СБП). Реквизиты предоставляются после подтверждения заказа."
-    },
-    "guarantees": {
-        "question": "Какие у меня гарантии?",
-        "answer": "Мы работаем официально и заключаем договор. Весь товар страхуется. В случае утери или повреждения груза мы полностью возмещаем его стоимость. Мы предоставляем фото- и видеоотчет по запросу."
-    },
-    "what_can_be_delivered": {
-        "question": "Что можно и нельзя доставлять?",
-        "answer": "Мы доставляем большинство категорий товаров: одежду, обувь, электронику, товары для дома, автозапчасти и многое другое.\n\n<b>Мы не доставляем:</b>\n- Скоропортящиеся продукты\n- Оружие и боеприпасы\n- Наркотические и психотропные вещества\n- Животных и растения"
-    }
-}
 
 # --- Клавиатуры для FAQ ---
 
 def get_faq_keyboard() -> InlineKeyboardMarkup:
     """Генерирует клавиатуру с вопросами из FAQ_DATA."""
     buttons = []
-    for key, data in FAQ_DATA.items():
+    faq_data = load_faq_data()
+    for key, data in faq_data.items():
         buttons.append([InlineKeyboardButton(text=data["question"], callback_data=f"faq_{key}")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -58,10 +39,11 @@ async def show_faq_menu(message: types.Message | types.CallbackQuery):
 async def show_faq_answer(callback: types.CallbackQuery):
     """Показывает ответ на выбранный вопрос и кнопку 'Назад'."""
     faq_key = callback.data.split("_", 1)[1]
+    faq_data = load_faq_data()
     
-    if faq_key in FAQ_DATA:
-        question = FAQ_DATA[faq_key]["question"]
-        answer = FAQ_DATA[faq_key]["answer"]
+    if faq_key in faq_data:
+        question = faq_data[faq_key]["question"]
+        answer = faq_data[faq_key]["answer"]
         
         # Создаем кнопку "Назад к вопросам"
         back_button = InlineKeyboardButton(text="⬅️ Назад к вопросам", callback_data="back_to_faq")
