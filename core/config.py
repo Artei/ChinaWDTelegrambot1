@@ -2,21 +2,23 @@ from dataclasses import dataclass, field
 from typing import Dict
 import os
 
+def get_trusted_channel_id():
+    """Безопасно читает и преобразует TRUSTED_CHANNEL_ID из переменных окружения."""
+    val = os.getenv("TRUSTED_CHANNEL_ID")
+    if val and val.strip():
+        try:
+            return int(val)
+        except (ValueError, TypeError):
+            return 0  # Возвращаем 0, если значение некорректно
+    return 0
+
 @dataclass
 class BotConfig:
     """Хранит базовые настройки бота и ID ролей."""
     token: str = os.getenv("BOT_TOKEN")
     admin_ids: list[int] = field(default_factory=lambda: [int(admin_id) for admin_id in os.getenv("ADMIN_IDS", "").split(",") if admin_id])
-    
-    @property
-    def trusted_channel_id(self) -> int | None:
-        channel_id_str = os.getenv("TRUSTED_CHANNEL_ID")
-        if channel_id_str and channel_id_str.strip():
-            try:
-                return int(channel_id_str)
-            except (ValueError, TypeError):
-                return None
-        return None
+    trusted_channel_id: int = field(default_factory=get_trusted_channel_id)
+
 
 @dataclass
 class CurrencyRates:
