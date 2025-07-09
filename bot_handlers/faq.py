@@ -17,7 +17,7 @@ def get_faq_keyboard() -> InlineKeyboardMarkup:
 
 # --- Обработчики FAQ ---
 
-@router.message(F.text == "❓ FAQ")
+@router.message(F.text == "❓ Частые вопросы (FAQ)")
 @router.callback_query(F.data == "main_menu:faq")
 async def show_faq_menu(message: types.Message | types.CallbackQuery):
     """Отправляет меню с вопросами FAQ."""

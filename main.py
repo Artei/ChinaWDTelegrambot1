@@ -4,7 +4,7 @@ import os
 
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters.command import Command, CommandStart
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, BotCommand
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, BotCommand, BotCommandScopeChat
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from aiohttp import web
 
@@ -78,12 +78,26 @@ async def main():
     bot = Bot(token=settings.bot.token)
     dp = Dispatcher()
 
-    # Настраиваем кнопку "Меню"
-    main_menu_commands = [
+    # --- Настройка команд в меню (для админов и обычных пользователей) ---
+    # 1. Команды для обычных пользователей (по умолчанию)
+    user_commands = [
+        BotCommand(command='/start', description='▶️ Запустить/Перезапустить бота')
+    ]
+    await bot.set_my_commands(user_commands)
+
+    # 2. Расширенные команды для администраторов
+    admin_commands = [
         BotCommand(command='/start', description='▶️ Запустить/Перезапустить бота'),
         BotCommand(command='/admin', description='Панель администратора')
     ]
-    await bot.set_my_commands(main_menu_commands)
+    # Устанавливаем персональные команды для каждого админа
+    for admin_id in settings.bot.admin_ids:
+        try:
+            await bot.set_my_commands(admin_commands, scope=BotCommandScopeChat(chat_id=admin_id))
+        except Exception as e:
+            logging.error(f"Не удалось установить команды для админа {admin_id}: {e}")
+    # --- Конец настройки команд ---
+
 
     # --- РЕГИСТРАЦИЯ ОБРАБОТЧИКОВ ---
     # Подключаем роутеры из других файлов

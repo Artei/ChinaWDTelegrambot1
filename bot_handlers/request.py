@@ -60,7 +60,7 @@ async def process_phone_from_contact(message: Message, state: FSMContext):
         "Спасибо! Ваш номер принят.",
         reply_markup=ReplyKeyboardRemove()  # Убираем кастомную клавиатуру
     )
-    await message.answer("Теперь, если хотите, оставьте комментарий (например, марка и модель авто):")
+    await message.answer("Теперь оставьте комментарий (например, марка и модель авто):")
     await state.set_state(RequestState.waiting_for_comment)
 
 
@@ -72,7 +72,7 @@ async def process_phone_from_text(message: Message, state: FSMContext):
         "Спасибо! Ваш номер принят.",
         reply_markup=ReplyKeyboardRemove() # Убираем кастомную клавиатуру
     )
-    await message.answer("Если хотите, оставьте комментарий (например, марка и модель авто):")
+    await message.answer("Теперь оставьте комментарий (например, марка и модель авто):")
     await state.set_state(RequestState.waiting_for_comment)
 
 
@@ -82,13 +82,16 @@ async def process_comment(message: Message, state: FSMContext):
     user_data = await state.get_data()
     user_data['comment'] = message.text
     
+    # ИСПРАВЛЕНИЕ: Корректно обрабатываем случай, когда у пользователя нет username
+    user_tg_link = f"@{message.from_user.username}" if message.from_user.username else "не указан"
+
     # Формируем сообщение для администратора
     admin_message = (
         f"🔔 Новая заявка!\n\n"
         f"👤 Имя: {message.from_user.full_name}\n"
         f"📞 Телефон: {user_data['phone']}\n"
         f"💬 Комментарий: {user_data['comment']}\n"
-        f"TG: @{message.from_user.username} (ID: {message.from_user.id})"
+        f"TG: {user_tg_link} (ID: {message.from_user.id})"
     )
     
     # Отправляем уведомление всем администраторам

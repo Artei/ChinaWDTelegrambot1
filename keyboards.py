@@ -4,7 +4,7 @@ def get_main_keyboard(is_admin: bool) -> ReplyKeyboardMarkup:
     """Генерирует основную клавиатуру в зависимости от роли пользователя."""
     buttons = [
         [KeyboardButton(text="🚗 Калькулятор")],
-        [KeyboardButton(text="❓ FAQ"), KeyboardButton(text="📝 Оставить заявку")]
+        [KeyboardButton(text="❓ Частые вопросы (FAQ)"), KeyboardButton(text="📝 Оставить заявку")]
     ]
     if is_admin:
         buttons.append([KeyboardButton(text="🔧 Админ-панель")])
@@ -17,7 +17,7 @@ def get_main_inline_keyboard(is_admin: bool) -> InlineKeyboardMarkup:
     buttons = [
         [InlineKeyboardButton(text="🚗 Калькулятор", callback_data="main_menu:calculator")],
         [
-            InlineKeyboardButton(text="❓ FAQ", callback_data="main_menu:faq"),
+            InlineKeyboardButton(text="❓ Частые вопросы (FAQ)", callback_data="main_menu:faq"),
             InlineKeyboardButton(text="📝 Оставить заявку", callback_data="main_menu:application")
         ]
     ]
@@ -33,7 +33,7 @@ def get_main_channel_keyboard() -> InlineKeyboardMarkup:
     buttons = [
         [InlineKeyboardButton(text="🚗 Калькулятор", url=f"https://t.me/{bot_username}?start=calculator")],
         [
-            InlineKeyboardButton(text="❓ FAQ", url=f"https://t.me/{bot_username}?start=faq"),
+            InlineKeyboardButton(text="❓ Частые вопросы (FAQ)", url=f"https://t.me/{bot_username}?start=faq"),
             InlineKeyboardButton(text="📝 Оставить заявку", url=f"https://t.me/{bot_username}?start=application")
         ]
     ]
