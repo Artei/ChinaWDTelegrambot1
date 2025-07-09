@@ -49,8 +49,9 @@ def _calculate_customs_for_individual(user_data: dict, settings: Settings) -> Cu
             duty_rate_map = settings.customs.duty.age_older_5_years
         
         # Находим подходящую ставку из словаря
-        for max_volume, rate in sorted(duty_rate_map.items()):
-            if engine_volume <= max_volume:
+        # ИСПРАВЛЕНИЕ: Преобразуем ключ (max_volume) в int для корректного сравнения
+        for max_volume_str, rate in sorted(duty_rate_map.items(), key=lambda item: int(item[0])):
+            if engine_volume <= int(max_volume_str):
                 duty_eur = rate * engine_volume
                 break
     

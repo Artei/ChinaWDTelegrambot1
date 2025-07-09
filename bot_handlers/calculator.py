@@ -3,12 +3,39 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
 import logging
+import re
 
 from core.calculator_logic import calculate_total_cost, format_result_for_user
 from core.config import settings
 import keyboards as kb
 
 router = Router()
+
+# --- Вспомогательная функция для парсинга ---
+
+def parse_engine_volume(text: str) -> int | None:
+    """
+    Парсит текст, чтобы извлечь объем двигателя в см³.
+    Поддерживает форматы "1500", "1.5", "1,5", "1.5л", "2.0T" и т.д.
+    """
+    # Заменяем запятую на точку и удаляем известные нечисловые символы
+    cleaned_text = text.lower().replace(',', '.').strip()
+    # Удаляем распространенные буквы, оставляя точку для десятичных чисел
+    cleaned_text = re.sub(r"[^\d.]", "", cleaned_text)
+
+    if not cleaned_text:
+        return None
+
+    try:
+        volume = float(cleaned_text)
+        # Если число меньше 100, считаем, что это литры, и переводим в см³
+        if 0 < volume < 100:
+            return int(volume * 1000)
+        # Иначе считаем, что это уже в см³
+        return int(volume)
+    except (ValueError, TypeError):
+        return None
+
 
 # --- Состояния для машины состояний (FSM) ---
 
@@ -125,8 +152,8 @@ async def process_fuel_type(callback: types.CallbackQuery, state: FSMContext):
     fuel_type = callback.data.split(":")[1]
     await state.update_data(fuel_type=fuel_type)
 
-    # Удаляем клавиатуру у предыдущего сообщения
-    await callback.message.edit_reply_markup(reply_markup=None)
+    # ИЗМЕНЕНИЕ: Удаляем исходное сообщение с кнопками, чтобы не засорять чат.
+    await callback.message.delete()
 
     # Для электромобилей не нужен объем двигателя
     if fuel_type == "Электро":
@@ -135,9 +162,10 @@ async def process_fuel_type(callback: types.CallbackQuery, state: FSMContext):
         # Сразу переходим к расчету
         await process_and_calculate(callback.message, state)
     else:
+        # Отправляем новое сообщение, которое является и подтверждением, и следующим вопросом.
         await callback.message.answer(
-            f"Тип топлива: {fuel_type}. Теперь нужен объем двигателя.",
-            reply_markup=get_cancel_keyboard(placeholder="Введите объем двигателя в см³...")
+            f"Тип топлива: {fuel_type}. Теперь нужен объем двигателя (например: 1500, 1.5 или 2.0л).",
+            reply_markup=get_cancel_keyboard(placeholder="Например: 1500, 1.5 или 2.0л")
         )
         await state.set_state(CarCalculationStates.waiting_for_engine_volume)
     await callback.answer() # Отвечаем на колбэк, чтобы убрать "часики" на кнопке
@@ -173,15 +201,14 @@ async def process_and_calculate(message: types.Message, state: FSMContext):
 @router.message(CarCalculationStates.waiting_for_engine_volume)
 async def process_engine_volume_and_calculate(message: types.Message, state: FSMContext):
     """Обрабатывает объем двигателя и запускает расчет."""
-    try:
-        volume = int(message.text.strip())
-        if volume <= 0:
-            raise ValueError("Объем должен быть положительным.")
-        await state.update_data(engine_volume=volume)
-        await state.update_data(engine_power=0)  # Мощность не запрашиваем
-        
-        # Запускаем расчет
-        await process_and_calculate(message, state)
+    volume = parse_engine_volume(message.text)
 
-    except (ValueError, TypeError):
-        await message.answer("Пожалуйста, введите корректный объем (целое положительное число).")
+    if volume is None or volume <= 0:
+        await message.answer("Пожалуйста, введите корректный объем.\nНапример: 1500, 1.5, 2.0л, 2.4 T")
+        return
+
+    await state.update_data(engine_volume=volume)
+    await state.update_data(engine_power=0)  # Мощность не запрашиваем
+
+    # Запускаем расчет
+    await process_and_calculate(message, state)
