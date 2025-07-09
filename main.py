@@ -6,12 +6,35 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters.command import Command, CommandStart
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, BotCommand
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from aiohttp import web
 
 from core.config import settings
 from core.settings_manager import load_settings, save_settings
 from bot_handlers import calculator, faq, admin, request, deep_links
 import keyboards as kb
 from core.currency_updater import fetch_currency_rates
+
+
+# --- КОД ДЛЯ ВЕБ-СЕРВЕРА (KEEP-ALIVE) ---
+async def web_server_handler(request):
+    """Обработчик, отвечающий на HTTP-запросы для поддержания активности."""
+    logging.info("Получен keep-alive запрос.")
+    return web.Response(text="Bot is running!")
+
+async def run_web_server():
+    """Запускает фоновый веб-сервер на aiohttp."""
+    app = web.Application()
+    app.add_routes([web.get('/', web_server_handler)])
+    runner = web.AppRunner(app)
+    await runner.setup()
+    # Порт для хостингов типа Replit обычно берется из переменной окружения
+    port = int(os.environ.get("PORT", 8080))
+    site = web.TCPSite(runner, '0.0.0.0', port)
+    await site.start()
+    logging.info(f"Веб-сервер для keep-alive запущен на порту {port}")
+    # Эта конструкция не даст задаче завершиться и будет ждать вечно
+    await asyncio.Event().wait()
+# --- КОНЕЦ КОДА ДЛЯ ВЕБ-СЕРВЕРА ---
 
 
 async def update_and_save_rates():
@@ -101,14 +124,19 @@ async def main():
 
     # ------------------------------------
 
+    # Создаем фоновую задачу для веб-сервера
+    web_server_task = asyncio.create_task(run_web_server())
+
     # Запуск бота
     try:
-        logging.info("Бот запускается...")
+        logging.info("Бот запускается в режиме long polling...")
         await dp.start_polling(bot)
     except Exception as e:
         logging.error(f"Ошибка при запуске бота: {e}")
     finally:
         await bot.session.close()
+        # При остановке бота, отменяем и задачу веб-сервера
+        web_server_task.cancel()
 
 
 if __name__ == "__main__":
