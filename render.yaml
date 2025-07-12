@@ -7,7 +7,7 @@ services:
     startCommand: "python main.py"
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11
+        value: 3.11.8
       - key: BOT_TOKEN
         sync: false # Эти переменные нужно будет задать в панели Render
       - key: ADMIN_IDS
