@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: chinawd-telegram-bot
+    env: python
+    plan: free # Указываем бесплатный тарифный план
+    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt"
+    startCommand: "python main.py"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11
+      - key: BOT_TOKEN
+        sync: false # Эти переменные нужно будет задать в панели Render
+      - key: ADMIN_IDS
+        sync: false
+      - key: TRUSTED_CHANNEL_ID
+        sync: false 
